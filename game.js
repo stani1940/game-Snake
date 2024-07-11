@@ -61,31 +61,38 @@ function startGame() {
     snakeBody = [{ x: 10, y: 10 }];
     direction = { x: 1, y: 0 };
     placeFood();
-    renderSnake();
 }
 
 function placeFood() {
-    const x = Math.floor(Math.random() * COLS) * CELL_SIZE - WIDTH / 2 + CELL_SIZE / 2;
-    const y = Math.floor(Math.random() * ROWS) * CELL_SIZE - HEIGHT / 2 + CELL_SIZE / 2;
-    food.position.set(x, y, 0);
+    const x = Math.floor(Math.random() * COLS);
+    const y = Math.floor(Math.random() * ROWS);
+    food.position.set((x * CELL_SIZE) - WIDTH / 2 + CELL_SIZE / 2, (y * CELL_SIZE) - HEIGHT / 2 + CELL_SIZE / 2, 0);
 }
 
 function update() {
-    const head = { ...snakeBody[0] };
-    head.x += direction.x;
-    head.y += direction.y;
+    const newHead = { x: snakeBody[0].x + direction.x, y: snakeBody[0].y + direction.y };
 
-    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS || snakeBody.some(segment => segment.x === head.x && segment.y === head.y)) {
-        gameOver();
+    // Check for collisions with walls
+    if (newHead.x < 0 || newHead.x >= COLS || newHead.y < 0 || newHead.y >= ROWS) {
+        endGame();
         return;
     }
 
-    snakeBody.unshift(head);
+    // Check for collisions with self
+    for (let segment of snakeBody) {
+        if (segment.x === newHead.x && segment.y === newHead.y) {
+            endGame();
+            return;
+        }
+    }
 
-    // Check if the snake has eaten the food
-    if (head.x === (food.position.x + WIDTH / 2 - CELL_SIZE / 2) / CELL_SIZE && head.y === (food.position.y + HEIGHT / 2 - CELL_SIZE / 2) / CELL_SIZE) {
-        placeFood();
+    snakeBody.unshift(newHead);
+
+    // Check for food collision
+    if (newHead.x === Math.floor((food.position.x + WIDTH / 2) / CELL_SIZE) &&
+        newHead.y === Math.floor((food.position.y + HEIGHT / 2) / CELL_SIZE)) {
         score++;
+        placeFood();
     } else {
         snakeBody.pop();
     }
@@ -94,24 +101,27 @@ function update() {
 }
 
 function renderSnake() {
-    snake.children.forEach(child => snake.remove(child));
-    snakeBody.forEach(segment => {
+    while (snake.children.length) {
+        snake.remove(snake.children[0]);
+    }
+
+    for (let segment of snakeBody) {
         const segmentMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE),
             new THREE.MeshBasicMaterial({ color: 0x00ff00 })
         );
         segmentMesh.position.set(
-            segment.x * CELL_SIZE - WIDTH / 2 + CELL_SIZE / 2,
-            segment.y * CELL_SIZE - HEIGHT / 2 + CELL_SIZE / 2,
+            (segment.x * CELL_SIZE) - WIDTH / 2 + CELL_SIZE / 2,
+            (segment.y * CELL_SIZE) - HEIGHT / 2 + CELL_SIZE / 2,
             0
         );
         snake.add(segmentMesh);
-    });
+    }
 }
 
-function gameOver() {
+function endGame() {
     clearInterval(gameInterval);
-    alert(`Game Over! Your score: ${score}`);
+    alert('Game Over! Your score is ' + score);
     document.getElementById('playButton').style.display = 'block';
 }
 
@@ -120,5 +130,4 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Initialize the game
 init();
